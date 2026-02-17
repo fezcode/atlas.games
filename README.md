@@ -39,8 +39,10 @@ go run main.go
 ### Building
 ```bash
 # Use the bake system
-go run Recipe.go run-win
+gobake run-win
 ```
+
+For more recipe information, just run `gobake`
 
 ## License
 MIT

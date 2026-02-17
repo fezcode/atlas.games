@@ -10,17 +10,23 @@ import (
 )
 
 var (
-	chickenStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
-	jumpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
-	obsStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
-	carStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("201")).Bold(true)
-	enemyStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("160")).Bold(true)
-	treeStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("34"))
+	chickenStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
+	jumpStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
+	invincibleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("46")).Bold(true)
+	obsStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
+	carStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("201")).Bold(true)
+	enemyStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("160")).Bold(true)
+	treeStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("34"))
 	sunStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("220"))
 	shootStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true)
 	titleStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true).Underline(true)
 	groundStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	deathStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Italic(true)
+	powerUpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("51")).Bold(true)
+	powerDownStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("130")).Bold(true)
+	noJumpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+	yesJumpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true)
+	pauseStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Bold(true)
 )
 
 type tickMsg time.Time
@@ -51,30 +57,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.State.Started = true
 				return m, tick()
 			}
-		case "s", " ":
+		case "p":
+			m.State.TogglePause()
+			if !m.State.Paused {
+				return m, tick()
+			}
+		case " ":
 			if !m.State.Started {
 				m.State.Started = true
 				return m, tick()
 			}
-			if !m.State.GameOver {
+			if !m.State.GameOver && !m.State.Paused {
 				m.State.Shoot()
 			}
-		case "up", "k", "w":
-			if m.State.Started {
+		case "up":
+			if m.State.Started && !m.State.GameOver && !m.State.Paused {
 				m.State.MoveUp()
 			}
-		case "down", "j", "x":
-			if m.State.Started {
+		case "down":
+			if m.State.Started && !m.State.GameOver && !m.State.Paused {
 				m.State.MoveDown()
 			}
-		case "right", "l", "d":
-			if m.State.Started {
+		case "right":
+			if m.State.Started && !m.State.GameOver && !m.State.Paused {
 				m.State.Jump()
 			}
 		}
 
 	case tickMsg:
-		if m.State.Started && !m.State.GameOver {
+		if m.State.Started && !m.State.GameOver && !m.State.Paused {
 			m.State.Update()
 			return m, tick()
 		}
@@ -83,8 +94,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// stamp renders a string into the buffer at (x, y) with a specific style,
-// ensuring each character takes exactly one cell.
 func stamp(buffer [][]string, x, y int, s string, style lipgloss.Style) {
 	if y < 0 || y >= len(buffer) {
 		return
@@ -98,7 +107,13 @@ func stamp(buffer [][]string, x, y int, s string, style lipgloss.Style) {
 
 func (m Model) View() string {
 	if !m.State.Started {
-		return fmt.Sprintf("\n\n   %s\n\n   Wilson is back, and this time it's personal.\n\n   [W/X] Up/Down\n   [D]   Jump\n   [SPC] Shoot (Requires Gun)\n\n   Press [S] or [SPACE] to Start\n", titleStyle.Render("WILSON'S REVENGE"))
+		return fmt.Sprintf("\n\n   %s\n\n   Wilson is back, and this time it's personal.\n\n   [↑ / ↓] Move Up/Down | [ → ] Jump | [SPC] Shoot\n   [ P ]   Pause / Resume\n\n   COLLECTABLES:\n   ~-=:  Get Gun + 5 Ammo (Orange)\n   [A]:  +3 Ammo (Cyan)\n   %s: Double Points + Invincible (5s)\n   %s: Lose 100 Points\n   %s: DISABLE JUMPING!\n   %s: ENABLE JUMPING!\n\n   Press [SPACE] to Start\n", 
+			titleStyle.Render("WILSON'S REVENGE"),
+			powerUpStyle.Render("[P+]"),
+			powerDownStyle.Render("[P-]"),
+			noJumpStyle.Render("[XJ]"),
+			yesJumpStyle.Render("[OJ]"),
+		)
 	}
 
 	if m.State.GameOver {
@@ -122,7 +137,7 @@ func (m Model) View() string {
 	stamp(buffer, GameWidth-15, 2, "-- O --", sunStyle)
 	stamp(buffer, GameWidth-15, 3, "/ | \\", sunStyle)
 
-	// Background (Trees)
+	// Background
 	for _, bg := range m.State.Background {
 		x := int(bg.X)
 		stamp(buffer, x, SkyHeight+1, "  ^  ", treeStyle)
@@ -134,13 +149,10 @@ func (m Model) View() string {
 	// Lanes
 	for l := 0; l < Lanes; l++ {
 		laneY := SkyHeight + BGHeight + (l * LaneHeight)
-		
-		// Ground
 		for x := 0; x < GameWidth; x++ {
 			buffer[laneY+LaneHeight-1][x] = groundStyle.Render("_")
 		}
 
-		// Objects
 		for _, obj := range m.State.Objects {
 			if obj.Lane == l {
 				x := int(obj.X)
@@ -161,18 +173,31 @@ func (m Model) View() string {
 					stamp(buffer, x, laneY+2, "~-=", lipgloss.NewStyle().Foreground(lipgloss.Color("214")))
 				case TypeAmmo:
 					stamp(buffer, x, laneY+2, "[A]", lipgloss.NewStyle().Foreground(lipgloss.Color("45")))
+				case TypePowerUp:
+					stamp(buffer, x, laneY+2, "[P+]", powerUpStyle)
+				case TypePowerDown:
+					stamp(buffer, x, laneY+2, "[P-]", powerDownStyle)
+				case TypeDisableJump:
+					stamp(buffer, x, laneY+2, "[XJ]", noJumpStyle)
+				case TypeEnableJump:
+					stamp(buffer, x, laneY+2, "[OJ]", yesJumpStyle)
 				}
 			}
 		}
 
-		// Wilson
 		if m.State.ChickenLane == l {
 			wx := ChickenX
 			wy := laneY + 1
 			style := chickenStyle
+			if m.State.InvincibleTimer > 0 {
+				style = invincibleStyle
+			}
+			
 			if m.State.Jumping {
 				wy -= 1
-				style = jumpStyle
+				if m.State.InvincibleTimer <= 0 {
+					style = jumpStyle
+				}
 				stamp(buffer, wx, wy, " (o> ", style)
 				stamp(buffer, wx, wy+1, "<| |>", style)
 				stamp(buffer, wx, wy+2, " L L ", style)
@@ -192,12 +217,35 @@ func (m Model) View() string {
 		}
 	}
 
+	// Pause Overlay
+	if m.State.Paused {
+		pauseText := " PAUSED "
+		stamp(buffer, (GameWidth-len(pauseText))/2, TotalViewHeight/2, pauseText, pauseStyle)
+	}
+
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf(" %s | Score: %d | Ammo: %d | Speed: %.2f\n\n", titleStyle.Render("WILSON'S REVENGE"), m.State.Score, m.State.Ammo, m.State.Speed))
+	status := ""
+	if m.State.InvincibleTimer > 0 {
+		status += " [INVINCIBLE]"
+	}
+	if m.State.DoubleScoreTimer > 0 {
+		status += " [2X POINTS]"
+	}
+	if m.State.JumpDisabled {
+		status += " [JUMP DISABLED]"
+	}
+
+	sb.WriteString(fmt.Sprintf(" %s | Score: %d | Ammo: %d | Speed: %.2f%s\n\n", 
+		titleStyle.Render("WILSON'S REVENGE"), 
+		m.State.Score, 
+		m.State.Ammo, 
+		m.State.Speed,
+		status))
+
 	for _, line := range buffer {
 		sb.WriteString(strings.Join(line, "") + "\n")
 	}
-	sb.WriteString("\n [W/X] Up/Down | [D] Jump | [Space] Shoot | [Q] Quit")
+	sb.WriteString("\n [↑ / ↓] Move | [ → ] Jump | [Space] Shoot | [P] Pause | [Q] Quit")
 	return sb.String()
 }
 
