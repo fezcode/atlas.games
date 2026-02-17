@@ -1,0 +1,10 @@
+wilson-revenge
+wilson-revenge.exe
+atlas.games
+atlas-games.exe
+vendor/
+*.log
+.idea/
+build/
+.vscode/
+*.exe~
