@@ -15,6 +15,14 @@ func main() {
 		fmt.Printf("atlas.games v%s\n", Version)
 		return
 	}
+	if len(os.Args) > 1 && (os.Args[1] == "-h" || os.Args[1] == "--help" || os.Args[1] == "help") {
+		fmt.Println("Atlas Games - Terminal-based game collection.")
+		fmt.Println("\nUsage:")
+		fmt.Println("  atlas.games        Start the game launcher")
+		fmt.Println("  atlas.games -v     Show version")
+		fmt.Println("  atlas.games -h     Show this help")
+		return
+	}
 
 	p := tea.NewProgram(game.NewModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
