@@ -13,7 +13,7 @@ import (
 const (
 	ViewWidth    = 80 
 	ViewHeight   = 25
-	SidebarWidth = 34
+	SidebarWidth = 36
 )
 
 var (
@@ -83,13 +83,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		key := msg.String()
+		key := strings.ToLower(msg.String())
 		switch key {
-		case "q", "ctrl+c", "esc": return m, tea.Quit
-		case "h": m.showingHelp = !m.showingHelp; return m, nil
+		case "q", "ctrl+c", "esc":
+			return m, tea.Quit
+		case "h":
+			m.showingHelp = !m.showingHelp
+			return m, nil
 		}
 
-		if m.showingHelp { return m, nil }
+		if m.showingHelp {
+			return m, nil
+		}
 
 		if m.state == StateMarket {
 			player := m.game.Units[0]
@@ -108,31 +113,56 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					player.Defense += 3
 					m.game.AddLog("MARKET: SHIELDS UPGRADED (+3 DEF)")
 				}
-			case "enter", " ", "m": m.state = StateMap
+			case "enter", " ", "m":
+				m.state = StateMap
 			}
 			return m, nil
 		}
 
 		if m.state == StateDuel {
-			if key == " " { m.resolveDuel(); m.state = StateDuelResult }
+			if key == " " || key == "enter" {
+				m.resolveDuel()
+				m.state = StateDuelResult
+			}
 			return m, nil
 		}
 		if m.state == StateDuelResult {
-			if key == "enter" || key == " " { m.state = StateMap; m.selectedUnit = -1 }
+			if key == "enter" || key == " " {
+				m.state = StateMap
+				m.selectedUnit = -1
+			}
 			return m, nil
 		}
 
 		switch key {
-		case "up", "w": if m.cursorY > 0 { m.cursorY-- }
-		case "down", "s": if m.cursorY < m.game.Height-1 { m.cursorY++ }
-		case "left", "a": if m.cursorX > 0 { m.cursorX-- }
-		case "right", "d": if m.cursorX < m.game.Width-1 { m.cursorX++ }
-		case "m": if m.game.Grid[m.cursorY][m.cursorX].Type == Market { m.state = StateMarket }
+		case "up", "w":
+			if m.cursorY > 0 {
+				m.cursorY--
+			}
+		case "down", "s":
+			if m.cursorY < m.game.Height-1 {
+				m.cursorY++
+			}
+		case "left", "a":
+			if m.cursorX > 0 {
+				m.cursorX--
+			}
+		case "right", "d":
+			if m.cursorX < m.game.Width-1 {
+				m.cursorX++
+			}
+		case "m":
+			if m.game.Grid[m.cursorY][m.cursorX].Type == Market {
+				m.state = StateMarket
+			}
 		case " ":
-			if m.selectedUnit != -1 { m.selectedUnit = -1 } else {
+			if m.selectedUnit != -1 {
+				m.selectedUnit = -1
+			} else {
 				for i, u := range m.game.Units {
 					if u.X == m.cursorX && u.Y == m.cursorY && u.Team == TeamPlayer {
-						m.selectedUnit = i; break
+						m.selectedUnit = i
+						break
 					}
 				}
 			}
@@ -141,7 +171,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				attacker := m.game.Units[m.selectedUnit]
 				dx := int(math.Abs(float64(attacker.X - m.cursorX)))
 				dy := int(math.Abs(float64(attacker.Y - m.cursorY)))
-				dist := dx; if dy > dx { dist = dy }
+				dist := dx
+				if dy > dx {
+					dist = dy
+				}
 
 				if dist > attacker.Moves {
 					m.lastMsg = "OUT OF RANGE"
@@ -151,23 +184,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var target *Unit
 				for _, u := range m.game.Units {
 					if u.X == m.cursorX && u.Y == m.cursorY && u.Team == TeamInvader {
-						target = u; break
+						target = u
+						break
 					}
 				}
 
 				if target != nil {
 					m.duelAttacker = attacker
 					m.duelTarget = target
-					m.duelAttacker.Moves = 0 
+					m.duelAttacker.Moves = 0
 					m.state = StateDuel
 					m.game.AddLog(fmt.Sprintf("COMBAT: ENGAGING %v!", target.Type))
 				} else {
 					m.lastMsg = m.game.MoveUnit(m.selectedUnit, m.cursorX, m.cursorY)
-					if m.game.Grid[m.cursorY][m.cursorX].Type == Market { m.state = StateMarket }
+					if m.game.Grid[m.cursorY][m.cursorX].Type == Market {
+						m.state = StateMarket
+					}
 					m.selectedUnit = -1
 				}
 			}
-		case "n": m.game.NextTurn(); m.selectedUnit = -1
+		case "n":
+			m.game.NextTurn()
+			m.selectedUnit = -1
 		}
 	}
 	return m, nil
@@ -226,7 +264,6 @@ func (m Model) View() string {
 	for y := startY; y < startY+ViewHeight; y++ {
 		var line strings.Builder
 		for x := startX; x < startX+ViewWidth; x++ {
-			// Range Highlight
 			inRange := false
 			if m.selectedUnit != -1 {
 				u := m.game.Units[m.selectedUnit]
@@ -235,40 +272,37 @@ func (m Model) View() string {
 				if dist <= u.Moves && dist > 0 { inRange = true }
 			}
 
-			// Cursor (Fixed 1-column highlight)
 			if x == m.cursorX && y == m.cursorY {
 				char := "X"; if m.selectedUnit != -1 { char = "M" }
-				line.WriteString(cursorStyle.Render(char))
+				line.WriteString(cursorStyle.Render(char) + " ")
 				continue
 			}
 
-			// Units
 			var unitAt *Unit
 			for _, u := range m.game.Units { if u.X == x && u.Y == y { unitAt = u; break } }
 			if unitAt != nil {
-				char := "S"; if unitAt.Type == Knight { char = "K" }
-				style := aiStyle
-				if unitAt.Team == TeamPlayer { char = "C"; style = playerStyle }
-				if unitAt.Type == Dragon { char = "D"; style = bossStyle }
+				char := "S "; style := aiStyle
+				if unitAt.Team == TeamPlayer { char = "C "; style = playerStyle }
+				if unitAt.Type == Dragon { char = "D "; style = bossStyle }
+				if unitAt.Type == Knight { char = "K "; style = aiStyle }
 				if inRange { style = style.Copy().Background(lipgloss.Color("237")) }
 				line.WriteString(style.Render(char))
 				continue
 			}
 
-			// Terrain (ASCII/Extended Symbols)
 			tile := m.game.Grid[y][x]
-			char := "·"; style := landStyle
+			char := ". "; style := landStyle
 			switch tile.Type {
-			case Water: char = "~"; style = waterStyle
-			case Forest: char = "↑"; style = forestStyle
-			case Mountain: char = "▲"; style = mountainStyle
-			case Cache: char = "$"; style = cacheStyle
-			case Market: char = "B"; style = highlightStyle
-			case Stronghold: char = "H"; style = playerStyle
-			case Princess: char = "P"; style = playerStyle
-			case WallV: char = "|"; style = wallStyle
-			case WallH: char = "-"; style = wallStyle
-			case WallTL, WallTR, WallBL, WallBR: char = "+"; style = wallStyle
+			case Water: char = "~ "; style = waterStyle
+			case Forest: char = "↑ "; style = forestStyle
+			case Mountain: char = "▲ "; style = mountainStyle
+			case Cache: char = "$ "; style = cacheStyle
+			case Market: char = "B "; style = highlightStyle
+			case Stronghold: char = "H "; style = playerStyle
+			case Princess: char = "P "; style = playerStyle
+			case WallV: char = "| "; style = wallStyle
+			case WallH: char = "- "; style = wallStyle
+			case WallTL, WallTR, WallBL, WallBR: char = "+ "; style = wallStyle
 			}
 			if inRange { style = style.Copy().Background(lipgloss.Color("237")) }
 			line.WriteString(style.Render(char))
@@ -287,7 +321,7 @@ func (m Model) View() string {
 	sb.WriteString(fmt.Sprintf("ATK:   %d | DEF: %d\n", player.Attack, player.Defense))
 	sb.WriteString(fmt.Sprintf("GOLD:  %d | LVL: %d\n", player.Gold, player.Level))
 	sb.WriteString(fmt.Sprintf("XP:    %d/%d\n", player.XP, player.NextLevelXP))
-	sb.WriteString(highlightStyle.Render(fmt.Sprintf("AP:    %d\n\n", player.Moves)))
+	sb.WriteString(highlightStyle.Render(fmt.Sprintf("AP:    %d/%d\n\n", player.Moves, player.MaxMoves)))
 
 	sb.WriteString(lipgloss.NewStyle().Bold(true).Render("SCAN INTEL") + "\n")
 	var hoverUnit *Unit
@@ -354,7 +388,7 @@ func (m Model) renderHelp() string {
 	h.WriteString(section.Render("MAP LEGEND") + "\n")
 	h.WriteString(" UNITS:  C YOU  D DRAGON  P PRINCESS  S SCOUT  K KNIGHT\n")
 	h.WriteString(" LOCS:   B MARKET  $ CACHE  H BASE  | - + CITY WALLS\n")
-	h.WriteString(" TILES:  · LAND  ↑ FOREST  ~ WATER  ▲ MOUNTAIN\n\n")
+	h.WriteString(" TILES:  . LAND  ↑ FOREST  ~ WATER  ▲ MOUNTAIN\n\n")
 
 	h.WriteString(lipgloss.NewStyle().Width(ViewWidth + SidebarWidth).Align(lipgloss.Center).Render("PRESS [H] TO RESUME MISSION"))
 

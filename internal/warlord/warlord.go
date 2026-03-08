@@ -58,6 +58,7 @@ type Unit struct {
 	Attack      int
 	Defense     int
 	Moves       int
+	MaxMoves    int
 	Gold        int
 }
 
@@ -133,13 +134,13 @@ func NewGame(w, h int) *GameState {
 	// Dragon Guard
 	g.Units = append(g.Units, &Unit{
 		ID: 999, Type: Dragon, Team: TeamInvader, X: px+1, Y: py,
-		Health: 350, MaxHP: 350, Level: 10, Attack: 45, Defense: 25, Moves: 2,
+		Health: 350, MaxHP: 350, Level: 10, Attack: 45, Defense: 25, Moves: 2, MaxMoves: 2,
 	})
 
 	// Player Start
 	g.Units = append(g.Units, &Unit{
 		ID: 0, Type: Commander, Team: TeamPlayer, X: g.BaseX, Y: g.BaseY,
-		Health: 60, MaxHP: 60, Level: 1, XP: 0, NextLevelXP: 100, Attack: 15, Defense: 8, Moves: 3, Gold: 100,
+		Health: 60, MaxHP: 60, Level: 1, XP: 0, NextLevelXP: 100, Attack: 15, Defense: 8, Moves: 3, MaxMoves: 3, Gold: 100,
 	})
 
 	// Spawn Minions
@@ -148,10 +149,11 @@ func NewGame(w, h int) *GameState {
 		if math.Abs(float64(ex-g.BaseX)) > 10 && g.Grid[ey][ex].Type == Land {
 			uType := Scout
 			hp, atk, def := 15, 8, 4
-			if rand.Float64() < 0.4 { uType = Knight; hp, atk, def = 30, 12, 6 }
+			maxM := 4
+			if rand.Float64() < 0.4 { uType = Knight; hp, atk, def = 30, 12, 6; maxM = 2 }
 			g.Units = append(g.Units, &Unit{
 				ID: len(g.Units), Type: uType, Team: TeamInvader, X: ex, Y: ey,
-				Health: hp, MaxHP: hp, Level: 1, Attack: atk, Defense: def, Moves: 2,
+				Health: hp, MaxHP: hp, Level: 1, Attack: atk, Defense: def, Moves: maxM, MaxMoves: maxM,
 			})
 		}
 	}
@@ -191,7 +193,7 @@ func (g *GameState) AddLog(msg string) {
 func (g *GameState) NextTurn() {
 	g.Turn++
 	for _, u := range g.Units {
-		if u.Team == TeamPlayer { u.Moves = g.getUnitMaxMoves(u.Type) }
+		if u.Team == TeamPlayer { u.Moves = u.MaxMoves }
 	}
 	for i := 0; i < len(g.Units); i++ {
 		u := g.Units[i]
@@ -244,15 +246,6 @@ func (g *GameState) aiAction(u *Unit) {
 	}
 }
 
-func (g *GameState) getUnitMaxMoves(t UnitType) int {
-	switch t {
-	case Scout: return 4
-	case Commander: return 3
-	case Dragon: return 2
-	default: return 2
-	}
-}
-
 func (g *GameState) CheckLevelUp(u *Unit) {
 	for u.XP >= u.NextLevelXP {
 		u.Level++
@@ -274,7 +267,6 @@ func (g *GameState) MoveUnit(unitID int, targetX, targetY int) string {
 
 	if dist > u.Moves { return "OUT OF RANGE" }
 
-	// REWARD FIX: CACHE GIVES BOTH XP AND GOLD
 	if g.Grid[targetY][targetX].Type == Cache {
 		xpGain := 75
 		goldGain := 50
