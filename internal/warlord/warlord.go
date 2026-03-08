@@ -19,6 +19,12 @@ const (
 	Cache
 	Market
 	Princess
+	WallV // ║
+	WallH // ═
+	WallTL // ╔
+	WallTR // ╗
+	WallBL // ╚
+	WallBR // ╝
 )
 
 type UnitType int
@@ -79,7 +85,7 @@ func NewGame(w, h int) *GameState {
 		Height: h,
 		Grid:   make([][]Tile, h),
 		Turn:   1,
-		Logs:   []string{"🛰️ System Boot: Save the Princess mission active."},
+		Logs:   []string{"🛰️ System Boot: Mission Red Dragon active."},
 	}
 
 	for y := 0; y < h; y++ {
@@ -90,7 +96,6 @@ func NewGame(w, h int) *GameState {
 			} else if r < 0.15 { g.Grid[y][x].Type = Forest
 			} else if r < 0.20 { g.Grid[y][x].Type = Mountain
 			} else if r < 0.22 { g.Grid[y][x].Type = Cache
-			} else if r < 0.24 { g.Grid[y][x].Type = Market
 			} else { g.Grid[y][x].Type = Land }
 		}
 	}
@@ -99,6 +104,7 @@ func NewGame(w, h int) *GameState {
 	g.Grid[g.BaseY][g.BaseX].Type = Stronghold
 	g.Grid[g.BaseY][g.BaseX].Team = TeamPlayer
 
+	// Ensure start area is walkable
 	for dy := -2; dy <= 2; dy++ {
 		for dx := -2; dx <= 2; dx++ {
 			if g.BaseY+dy >= 0 && g.BaseY+dy < h && g.BaseX+dx >= 0 && g.BaseX+dx < w {
@@ -107,16 +113,21 @@ func NewGame(w, h int) *GameState {
 		}
 	}
 
-	// ALWAYS ADD COMMANDER FIRST (Index 0)
-	g.Units = append(g.Units, &Unit{
-		ID: 0, Type: Commander, Team: TeamPlayer, X: g.BaseX, Y: g.BaseY,
-		Health: 60, MaxHP: 60, Level: 1, XP: 0, NextLevelXP: 100, Attack: 15, Defense: 8, Moves: 3, Gold: 100,
-	})
+	// Place Cities with Markets
+	numCities := 4
+	for i := 0; i < numCities; i++ {
+		cx, cy := rand.Intn(w-10)+5, rand.Intn(h-10)+5
+		if math.Abs(float64(cx-g.BaseX)) < 15 && math.Abs(float64(cy-g.BaseY)) < 10 {
+			i--
+			continue
+		}
+		g.generateCity(cx, cy)
+	}
 
 	// Place Princess
 	px, py := 10 + rand.Intn(10), 10 + rand.Intn(10)
-	if rand.Float64() < 0.5 { px = w - 10 - rand.Intn(10) }
-	if rand.Float64() < 0.5 { py = h - 10 - rand.Intn(10) }
+	if rand.Float64() < 0.5 { px = w - 15 - rand.Intn(10) }
+	if rand.Float64() < 0.5 { py = h - 15 - rand.Intn(10) }
 	g.Grid[py][px].Type = Princess
 
 	// Dragon Guard
@@ -125,7 +136,13 @@ func NewGame(w, h int) *GameState {
 		Health: 350, MaxHP: 350, Level: 10, Attack: 45, Defense: 25, Moves: 2,
 	})
 
-	// Minions
+	// Player Start
+	g.Units = append(g.Units, &Unit{
+		ID: 0, Type: Commander, Team: TeamPlayer, X: g.BaseX, Y: g.BaseY,
+		Health: 60, MaxHP: 60, Level: 1, XP: 0, NextLevelXP: 100, Attack: 15, Defense: 8, Moves: 3, Gold: 100,
+	})
+
+	// Spawn Minions
 	for i := 0; i < 45; i++ {
 		ex, ey := rand.Intn(w), rand.Intn(h)
 		if math.Abs(float64(ex-g.BaseX)) > 10 && g.Grid[ey][ex].Type == Land {
@@ -142,6 +159,30 @@ func NewGame(w, h int) *GameState {
 	return g
 }
 
+func (g *GameState) generateCity(cx, cy int) {
+	size := 5
+	for dy := 0; dy < size; dy++ {
+		for dx := 0; dx < size; dx++ {
+			x, y := cx+dx, cy+dy
+			if x >= g.Width || y >= g.Height { continue }
+			if (dy == 0 && dx == size/2) || (dy == size-1 && dx == size/2) {
+				g.Grid[y][x].Type = Land
+				continue
+			}
+			if dy == 0 { g.Grid[y][x].Type = WallH
+			} else if dy == size-1 { g.Grid[y][x].Type = WallH
+			} else if dx == 0 { g.Grid[y][x].Type = WallV
+			} else if dx == size-1 { g.Grid[y][x].Type = WallV
+			} else { g.Grid[y][x].Type = Land }
+		}
+	}
+	g.Grid[cy][cx].Type = WallTL
+	g.Grid[cy][cx+size-1].Type = WallTR
+	g.Grid[cy+size-1][cx].Type = WallBL
+	g.Grid[cy+size-1][cx+size-1].Type = WallBR
+	g.Grid[cy+size/2][cx+size/2].Type = Market
+}
+
 func (g *GameState) AddLog(msg string) {
 	g.Logs = append(g.Logs, msg)
 	if len(g.Logs) > 6 { g.Logs = g.Logs[1:] }
@@ -149,21 +190,13 @@ func (g *GameState) AddLog(msg string) {
 
 func (g *GameState) NextTurn() {
 	g.Turn++
-	
-	// Reset Moves
 	for _, u := range g.Units {
 		if u.Team == TeamPlayer { u.Moves = g.getUnitMaxMoves(u.Type) }
 	}
-
-	// AI Turn
 	for i := 0; i < len(g.Units); i++ {
 		u := g.Units[i]
-		if u.Team == TeamInvader && u.Health > 0 {
-			g.aiAction(u)
-		}
+		if u.Team == TeamInvader && u.Health > 0 { g.aiAction(u) }
 	}
-	
-	// Cleanup and Check Win/Loss
 	active := []*Unit{}
 	commanderAlive := false
 	dragonAlive := false
@@ -175,13 +208,11 @@ func (g *GameState) NextTurn() {
 		}
 	}
 	g.Units = active
-	
 	if !dragonAlive { g.GameWon = true }
 	if !commanderAlive { g.GameOver = true }
 }
 
 func (g *GameState) aiAction(u *Unit) {
-	// Find commander safely
 	var commander *Unit
 	for _, unit := range g.Units {
 		if unit.Type == Commander { commander = unit; break }
@@ -201,13 +232,13 @@ func (g *GameState) aiAction(u *Unit) {
 			dmg := (u.Attack + roll) - commander.Defense
 			if dmg < 1 { dmg = 1 }
 			commander.Health -= dmg
-			g.AddLog(fmt.Sprintf("🔥 %v ATK: -%d HP to you!", u.Type, dmg))
+			g.AddLog(fmt.Sprintf("🔥 %v ATK: -%d HP!", u.Type, dmg))
 			return
 		}
 		moveX, moveY := u.X, u.Y
 		if u.X < commander.X { moveX++ } else if u.X > commander.X { moveX-- }
 		if u.Y < commander.Y { moveY++ } else if u.Y > commander.Y { moveY-- }
-		if g.Grid[moveY][moveX].Type != Water && g.Grid[moveY][moveX].Type != Mountain {
+		if g.Grid[moveY][moveX].Type == Land || g.Grid[moveY][moveX].Type == Market {
 			u.X, u.Y = moveX, moveY
 		}
 	}
@@ -230,8 +261,8 @@ func (g *GameState) CheckLevelUp(u *Unit) {
 		u.Attack += 4
 		u.Defense += 3
 		u.MaxHP += 20
-		u.Health = u.MaxHP
-		g.AddLog(fmt.Sprintf("⭐ RANK UP: Level %d achieved.", u.Level))
+		u.Health = u.MaxHP // FULL HEAL ON LEVEL UP
+		g.AddLog(fmt.Sprintf("⭐ RANK UP: Level %d achieved (HEALED).", u.Level))
 	}
 }
 
@@ -243,16 +274,21 @@ func (g *GameState) MoveUnit(unitID int, targetX, targetY int) string {
 
 	if dist > u.Moves { return "OUT OF RANGE" }
 
+	// REWARD FIX: CACHE GIVES BOTH XP AND GOLD
 	if g.Grid[targetY][targetX].Type == Cache {
-		u.XP += 75; u.Gold += 40
+		xpGain := 75
+		goldGain := 50
+		u.XP += xpGain
+		u.Gold += goldGain
 		g.Grid[targetY][targetX].Type = Land
 		u.X, u.Y = targetX, targetY
 		u.Moves -= dist
 		g.CheckLevelUp(u)
-		return "📦 CACHE: +75 XP / +40G"
+		return fmt.Sprintf("📦 CACHE: +%d XP / +%d GOLD", xpGain, goldGain)
 	}
 
-	if g.Grid[targetY][targetX].Type == Water || g.Grid[targetY][targetX].Type == Mountain {
+	tType := g.Grid[targetY][targetX].Type
+	if tType == Water || tType == Mountain || tType == WallV || tType == WallH || tType == WallTL || tType == WallTR || tType == WallBL || tType == WallBR {
 		return "PATH BLOCKED"
 	}
 
