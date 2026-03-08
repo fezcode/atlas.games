@@ -22,7 +22,7 @@ type Model struct {
 
 func NewModel() Model {
 	return Model{
-		items: []string{"Wilson's Revenge", "WFC Land Creator", "WFC City Generator", "Exit"},
+		items: []string{"Wilson's Revenge", "WFC Land Creator", "WFC City Generator", "Tactical Colony", "Exit"},
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"atlas.games/internal/wilson"
 	"atlas.games/internal/wfc"
 	"atlas.games/internal/city"
+	"atlas.games/internal/colony"
 )
 
 var Version = "dev"
@@ -40,6 +41,8 @@ func main() {
 			gameModel = wfc.NewModel()
 		case "WFC City Generator":
 			gameModel = city.NewModel()
+		case "Tactical Colony":
+			gameModel = colony.NewModel()
 		case "Exit", "":
 			fmt.Println("Goodbye, operator.")
 			return
