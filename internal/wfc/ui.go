@@ -29,7 +29,7 @@ type Model struct {
 
 func NewModel() Model {
 	// Massive grid
-	w, h := 120, 40
+	w, h := 200, 60
 	return Model{
 		wfc:    NewWFC(w, h),
 		width:  w,
@@ -60,7 +60,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		if !m.done && !m.showingHelp {
 			// Higher burst for massive grid
-			for i := 0; i < 15; i++ {
+			for i := 0; i < 50; i++ {
 				m.done = m.wfc.Step()
 				if m.done {
 					break
