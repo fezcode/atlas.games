@@ -5,7 +5,10 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"atlas.games/internal/game"
+	"atlas.games/internal/menu"
+	"atlas.games/internal/wilson"
+	"atlas.games/internal/wfc"
+	"atlas.games/internal/city"
 )
 
 var Version = "dev"
@@ -15,18 +18,39 @@ func main() {
 		fmt.Printf("atlas.games v%s\n", Version)
 		return
 	}
-	if len(os.Args) > 1 && (os.Args[1] == "-h" || os.Args[1] == "--help" || os.Args[1] == "help") {
-		fmt.Println("Atlas Games - Terminal-based game collection.")
-		fmt.Println("\nUsage:")
-		fmt.Println("  atlas.games        Start the game launcher")
-		fmt.Println("  atlas.games -v     Show version")
-		fmt.Println("  atlas.games -h     Show this help")
-		return
-	}
 
-	p := tea.NewProgram(game.NewModel(), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error running game: %v\n", err)
-		os.Exit(1)
+	for {
+		// 1. Run Menu
+		m := menu.NewModel()
+		p := tea.NewProgram(m, tea.WithAltScreen())
+		res, err := p.Run()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error running menu: %v\n", err)
+			os.Exit(1)
+		}
+
+		choice := res.(menu.Model).Choice()
+
+		// 2. Launch Game
+		var gameModel tea.Model
+		switch choice {
+		case "Wilson's Revenge":
+			gameModel = wilson.NewModel()
+		case "WFC Land Creator":
+			gameModel = wfc.NewModel()
+		case "WFC City Generator":
+			gameModel = city.NewModel()
+		case "Exit", "":
+			fmt.Println("Goodbye, operator.")
+			return
+		}
+
+		if gameModel != nil {
+			gp := tea.NewProgram(gameModel, tea.WithAltScreen())
+			if _, err := gp.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error running game: %v\n", err)
+				os.Exit(1)
+			}
+		}
 	}
 }

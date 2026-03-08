@@ -1,4 +1,4 @@
-package game
+package wilson
 
 import (
 	"math/rand"
