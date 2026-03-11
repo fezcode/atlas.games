@@ -15,10 +15,13 @@ A biological simulation engine. Manage an ant colony, forage for food, and avoid
 ### 3. Atlas Warlord
 A tactical combat simulator. Command your units on the battlefield and outmaneuver the enemy.
 
-### 4. Atlas Defense (New!)
+### 4. Atlas Defense
 A classic Tower Defense game. Defend the Atlas core from incoming data corruption by building tactical turrets. Manage your gold and health to survive increasingly difficult waves.
 
-### 5. WFC Generators
+### 5. Atlas Void (New!)
+An economy-driven space trader. Travel between planetary systems, trade commodities (Fuel, Food, Metal, Tech), and manage your ship's cargo and fuel to become the richest trader in the void.
+
+### 6. WFC Generators
 - **WFC Land Creator**: Procedural terrain generation using Wave Function Collapse.
 - **WFC City Generator**: Urban layout generation using the same powerful algorithm.
 
