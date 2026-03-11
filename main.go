@@ -11,6 +11,7 @@ import (
 	"atlas.games/internal/city"
 	"atlas.games/internal/colony"
 	"atlas.games/internal/warlord"
+	"atlas.games/internal/defense"
 )
 
 var Version = "dev"
@@ -46,6 +47,8 @@ func main() {
 			gameModel = colony.NewModel()
 		case "Atlas Warlord":
 			gameModel = warlord.NewModel()
+		case "Atlas Defense":
+			gameModel = defense.NewModel()
 		case "Exit", "":
 			fmt.Println("Goodbye, operator.")
 			return

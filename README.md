@@ -1,31 +1,35 @@
-# Wilson's Revenge (atlas.games)
+# Atlas Games (atlas.games)
 
 ![banner.png](./banner.png)
 
-Wilson the Chicken is back, and this time it's personal. A high-speed, horizontal terminal runner inspired by classic arcade games.
+A collection of high-performance, terminal-based games and generators built with Go and Bubble Tea.
 
-## Features
-- **Horizontal Scrolling**: A dynamic 3-lane world that moves from right to left.
-- **Variable Enemies**: 
-  - **Barricades**: Standard obstacles that block your path.
-  - **Cars**: High-speed vehicles that can catch you off guard.
-  - **Enemies**: Humanoids on the run.
-- **Arsenal**: Wilson can pick up guns and ammo to clear obstacles in his lane.
-- **Parallax Background**: Beautifully rendered trees and a sun that move at a slower speed for a sense of depth.
-- **Progressive Difficulty**: The game speed increases every 40 frames, capping at a challenging **4.5**.
-- **Polish**: Distinct ASCII art for all entities and states, including Wilson's blue-winged jump!
+## Games Included
+
+### 1. Wilson's Revenge
+Wilson the Chicken is back! A high-speed, horizontal terminal runner. Dodge cars, jump over barricades, and blast through enemies in this arcade classic.
+
+### 2. Tactical Colony
+A biological simulation engine. Manage an ant colony, forage for food, and avoid lethal territorial spiders.
+
+### 3. Atlas Warlord
+A tactical combat simulator. Command your units on the battlefield and outmaneuver the enemy.
+
+### 4. Atlas Defense (New!)
+A classic Tower Defense game. Defend the Atlas core from incoming data corruption by building tactical turrets. Manage your gold and health to survive increasingly difficult waves.
+
+### 5. WFC Generators
+- **WFC Land Creator**: Procedural terrain generation using Wave Function Collapse.
+- **WFC City Generator**: Urban layout generation using the same powerful algorithm.
 
 ## How to Play
 
-### Controls
-- **W / X** or **K / J**: Move Up/Down across lanes
-- **D** or **L**: Jump (turn blue and avoid collisions)
-- **Space**: Start Game / Shoot (if gun and ammo are equipped)
-- **R**: Restart after "lo siento, Wilson"
-- **Q / Ctrl+C**: Quit
-
-### Objective
-Dodge or destroy obstacles to score points. Every obstacle passed or destroyed increases your score. Watch out—the faster you go, the less time you have to react!
+### General Controls
+- **Arrows / WASD**: Navigation
+- **Enter / Space**: Select / Action
+- **H**: Toggle Help (in-game)
+- **R**: Reset Game
+- **Q / Ctrl+C**: Quit to Menu / Exit
 
 ## Development
 
@@ -38,11 +42,9 @@ go run main.go
 
 ### Building
 ```bash
-# Use the bake system
-gobake run-win
+# Use the gobake system
+gobake build
 ```
-
-For more recipe information, just run `gobake`
 
 ## License
 MIT
